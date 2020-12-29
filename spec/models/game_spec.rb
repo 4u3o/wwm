@@ -47,7 +47,7 @@ RSpec.describe Game, type: :model do
 
       # Проверяем статус и поля
       expect(game.user).to eq(user)
-      expect(game.status).to eq(:in_progress)
+      expect(game.check_status).to eq(:in_progress)
 
       # Проверяем корректность массива игровых вопросов
       expect(game.game_questions.size).to eq(15)
@@ -62,7 +62,7 @@ RSpec.describe Game, type: :model do
       # Текущий уровень игры и статус
       level = game_w_questions.current_level
       q = game_w_questions.current_game_question
-      expect(game_w_questions.status).to eq(:in_progress)
+      expect(game_w_questions.check_status).to eq(:in_progress)
 
       game_w_questions.answer_current_question!(q.correct_answer_key)
 
@@ -73,7 +73,7 @@ RSpec.describe Game, type: :model do
       expect(game_w_questions.current_game_question).not_to eq(q)
 
       # Игра продолжается
-      expect(game_w_questions.status).to eq(:in_progress)
+      expect(game_w_questions.check_status).to eq(:in_progress)
       expect(game_w_questions.finished?).to be_falsey
     end
   end
@@ -88,7 +88,7 @@ RSpec.describe Game, type: :model do
       end
 
       it 'status equal :money' do
-        expect(subject.status).to eq(:money)
+        expect(subject.check_status).to eq(:money)
       end
 
       it 'finished' do
@@ -102,7 +102,7 @@ RSpec.describe Game, type: :model do
   end
 
   describe '#status' do
-    subject { game_w_questions.status }
+    subject { game_w_questions.check_status }
 
     context 'after 15 correct answers' do
       before do
@@ -186,7 +186,7 @@ RSpec.describe Game, type: :model do
       end
 
       it 'status equal in_progress' do
-        expect(game_w_questions.status).to eq(:in_progress)
+        expect(game_w_questions.check_status).to eq(:in_progress)
       end
 
       it 'current level raises by 1' do
@@ -203,7 +203,7 @@ RSpec.describe Game, type: :model do
       end
 
       it 'status equal fail' do
-        expect(game_w_questions.status).to eq(:fail)
+        expect(game_w_questions.check_status).to eq(:fail)
       end
 
       it 'current level still equal to 0' do
@@ -219,7 +219,7 @@ RSpec.describe Game, type: :model do
       end
 
       it 'status equal timeout' do
-        expect(game_w_questions.status).to eq(:timeout)
+        expect(game_w_questions.check_status).to eq(:timeout)
       end
     end
 
@@ -230,7 +230,7 @@ RSpec.describe Game, type: :model do
       end
 
       it 'status equal won' do
-        expect(game_w_questions.status).to eq(:won)
+        expect(game_w_questions.check_status).to eq(:won)
       end
     end
   end

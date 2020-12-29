@@ -149,13 +149,10 @@ class Game < ActiveRecord::Base
   # :won — игра выиграна (все 15 вопросов покорены)
   # :money — игра завершена, игрок забрал деньги
   # :in_progress — игра еще идет
-  def status
+  def check_status
     return :in_progress unless finished?
 
     if is_failed
-      # TODO: дорогой ученик! Если TIME_LIMIT в будущем изменится, статусы
-      #   старых, уже сыгранных игр могут измениться. Подумайте как это исправить!
-      #   Ответ найдете в файле настроек вашего тестового окружения.
       (finished_at - created_at) > TIME_LIMIT ? :timeout : :fail
     elsif current_level > Question::QUESTION_LEVELS.max
       :won
@@ -175,6 +172,7 @@ class Game < ActiveRecord::Base
       self.prize = amount
       self.finished_at = Time.now
       self.is_failed = failed
+      self.status = check_status
       user.balance += amount
       save!
       user.save!
