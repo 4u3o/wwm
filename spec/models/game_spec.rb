@@ -19,6 +19,11 @@ RSpec.describe Game, type: :model do
     FactoryGirl.create(:game_with_questions, user: user)
   end
 
+  let(:answer_one_question) do
+    q = game_w_questions.current_game_question
+    game_w_questions.answer_current_question!(q.correct_answer_key)
+  end
+
   # Группа тестов на работу фабрики создания новых игр
   context 'Game Factory' do
     it 'Game.create_game! new correct game' do
@@ -74,14 +79,13 @@ RSpec.describe Game, type: :model do
   end
 
   describe '#take_money!' do
-    before do
-      q = game_w_questions.current_game_question
-      game_w_questions.answer_current_question!(q.correct_answer_key)
-      game_w_questions.take_money!
-    end
+    subject { game_w_questions }
 
     context "after 1 correct answer" do
-      subject { game_w_questions }
+      before do
+        answer_one_question
+        game_w_questions.take_money!
+      end
 
       it 'status equal :money' do
         expect(subject.status).to eq(:money)
@@ -91,8 +95,8 @@ RSpec.describe Game, type: :model do
         expect(subject.finished?).to be_truthy
       end
 
-      it 'user.balance equal 100 ' do
-        expect(subject.user.balance).to eq(100)
+      it 'user.balance equal first prize ' do
+        expect(subject.user.balance).to eq(Game::PRIZES.first)
       end
     end
   end
@@ -117,8 +121,7 @@ RSpec.describe Game, type: :model do
 
     context 'after #take_money!' do
       before do
-        q = game_w_questions.current_game_question
-        game_w_questions.answer_current_question!(q.correct_answer_key)
+        answer_one_question
         game_w_questions.take_money!
       end
 
@@ -141,6 +144,38 @@ RSpec.describe Game, type: :model do
       end
 
       it { is_expected.to eq(:timeout)}
+    end
+  end
+
+  describe '#current_game_question' do
+    subject { game_w_questions.current_game_question }
+
+    context 'when game just started' do
+      it { is_expected.to eq(game_w_questions.game_questions.first) }
+    end
+
+    context 'when 1 question answered' do
+      before do
+        answer_one_question
+      end
+
+      it { is_expected.to eq(game_w_questions.game_questions.second) }
+    end
+  end
+
+  describe '#previous_level' do
+    subject { game_w_questions.previous_level }
+
+    context 'when 1 question answered' do
+      before { game_w_questions.current_level = 1 }
+
+      it { is_expected.to be_zero }
+    end
+
+    context 'when 15 questions answered' do
+      before { game_w_questions.current_level = 14 }
+
+      it { is_expected.to eq(13) }
     end
   end
 end
