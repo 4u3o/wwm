@@ -178,4 +178,60 @@ RSpec.describe Game, type: :model do
       it { is_expected.to eq(13) }
     end
   end
+
+  describe '#answer_current_question!' do
+    context 'when answer was correct' do
+      before do
+        answer_one_question
+      end
+
+      it 'status equal in_progress' do
+        expect(game_w_questions.status).to eq(:in_progress)
+      end
+
+      it 'current level raises by 1' do
+        expect {
+          q = game_w_questions.current_game_question
+          game_w_questions.answer_current_question!(q.correct_answer_key)
+        }.to change(game_w_questions, :current_level).by(1)
+      end
+    end
+
+    context 'when answer was incorrect' do
+      before do
+        game_w_questions.answer_current_question!('a')
+      end
+
+      it 'status equal fail' do
+        expect(game_w_questions.status).to eq(:fail)
+      end
+
+      it 'current level still equal to 0' do
+        expect(game_w_questions.current_level).to be_zero
+      end
+    end
+
+    context 'when time is over' do
+      before do
+        game_w_questions.finished_at = Time.now
+        game_w_questions.created_at = 1.hour.ago
+        game_w_questions.answer_current_question!('a')
+      end
+
+      it 'status equal timeout' do
+        expect(game_w_questions.status).to eq(:timeout)
+      end
+    end
+
+    context 'when it was last answer' do
+      before do
+        game_w_questions.current_level = 14
+        answer_one_question
+      end
+
+      it 'status equal won' do
+        expect(game_w_questions.status).to eq(:won)
+      end
+    end
+  end
 end
