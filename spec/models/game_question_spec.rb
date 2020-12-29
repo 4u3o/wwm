@@ -8,9 +8,8 @@ RSpec.describe GameQuestion, type: :model do
   # Задаем локальную переменную game_question, доступную во всех тестах этого
   # сценария: она будет создана на фабрике заново для каждого блока it,
   # где она вызывается.
-  let(:question) { FactoryGirl.create(:question) }
   let(:game_question) do
-    FactoryGirl.create(:game_question, a: 2, b: 1, c: 4, d: 3, question: question)
+    FactoryGirl.create(:game_question, a: 2, b: 1, c: 4, d: 3)
   end
 
   # Группа тестов на игровое состояние объекта вопроса
@@ -33,17 +32,19 @@ RSpec.describe GameQuestion, type: :model do
 
   describe '#text' do
     it 'equal to question.text' do
-      expect(game_question.text).to eq(question.text)
+      expect(game_question.text).to eq(game_question.question.text)
     end
   end
 
   describe '#level' do
     it 'equal to question.level' do
-      expect(game_question.level).to eq(question.level)
+      expect(game_question.level).to eq(game_question.question.level)
     end
   end
 
   describe '#correct_answer_key' do
+    subject { game_question.correct_answer_key }
 
+    it { is_expected.to eq('b') }
   end
 end
