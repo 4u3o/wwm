@@ -19,9 +19,15 @@ RSpec.describe Game, type: :model do
     FactoryGirl.create(:game_with_questions, user: user)
   end
 
-  let(:answer_one_question) do
+  let(:answer_question_correct) do
     q = game_w_questions.current_game_question
     game_w_questions.answer_current_question!(q.correct_answer_key)
+  end
+
+  let(:answer_question_incorrect) do
+    q = game_w_questions.current_game_question
+    incorrect_answer_key = (q.variants.keys - [q.correct_answer_key]).sample
+    game_w_questions.answer_current_question!(incorrect_answer_key)
   end
 
   # Группа тестов на работу фабрики создания новых игр
@@ -74,7 +80,7 @@ RSpec.describe Game, type: :model do
 
       # Игра продолжается
       expect(game_w_questions.check_status).to eq(:in_progress)
-      expect(game_w_questions.finished?).to be_falsey
+      expect(game_w_questions).not_to be_finished
     end
   end
 
@@ -83,7 +89,7 @@ RSpec.describe Game, type: :model do
 
     context "after 1 correct answer" do
       before do
-        answer_one_question
+        answer_question_correct
         game_w_questions.take_money!
       end
 
@@ -91,8 +97,8 @@ RSpec.describe Game, type: :model do
         expect(subject.check_status).to eq(:money)
       end
 
-      it 'finished' do
-        expect(subject.finished?).to be_truthy
+      it 'is finished' do
+        expect(subject).to be_finished
       end
 
       it 'user.balance equal first prize ' do
@@ -121,7 +127,7 @@ RSpec.describe Game, type: :model do
 
     context 'after #take_money!' do
       before do
-        answer_one_question
+        answer_question_correct
         game_w_questions.take_money!
       end
 
@@ -130,7 +136,7 @@ RSpec.describe Game, type: :model do
 
     context 'after incorrect answer' do
       before do
-        game_w_questions.answer_current_question!('a')
+        answer_question_incorrect
       end
 
       it { is_expected.to eq(:fail) }
@@ -155,9 +161,7 @@ RSpec.describe Game, type: :model do
     end
 
     context 'when 1 question answered' do
-      before do
-        answer_one_question
-      end
+      before { answer_question_correct }
 
       it { is_expected.to eq(game_w_questions.game_questions.second) }
     end
@@ -181,26 +185,31 @@ RSpec.describe Game, type: :model do
 
   describe '#answer_current_question!' do
     context 'when answer was correct' do
-      before do
-        answer_one_question
-      end
-
       it 'status equal in_progress' do
+        answer_question_correct
+
         expect(game_w_questions.check_status).to eq(:in_progress)
       end
 
-      it 'current level raises by 1' do
-        expect {
-          q = game_w_questions.current_game_question
-          game_w_questions.answer_current_question!(q.correct_answer_key)
-        }.to change(game_w_questions, :current_level).by(1)
+      it 'does not change game status' do
+        expect { answer_question_correct }
+          .not_to change(game_w_questions, :check_status)
+      end
+
+      it 'raises current level by 1' do
+        expect { answer_question_correct }
+          .to change(game_w_questions, :current_level).by(1)
+      end
+
+      it 'is not finished' do
+        answer_question_correct
+
+        expect(game_w_questions).not_to be_finished
       end
     end
 
     context 'when answer was incorrect' do
-      before do
-        game_w_questions.answer_current_question!('a')
-      end
+      before { answer_question_incorrect }
 
       it 'status equal fail' do
         expect(game_w_questions.check_status).to eq(:fail)
@@ -209,28 +218,40 @@ RSpec.describe Game, type: :model do
       it 'current level still equal to 0' do
         expect(game_w_questions.current_level).to be_zero
       end
+
+      it 'is finished' do
+        expect(game_w_questions).to be_finished
+      end
     end
 
     context 'when time is over' do
       before do
         game_w_questions.finished_at = Time.now
         game_w_questions.created_at = 1.hour.ago
-        game_w_questions.answer_current_question!('a')
+        answer_question_correct
       end
 
       it 'status equal timeout' do
         expect(game_w_questions.check_status).to eq(:timeout)
+      end
+
+      it 'is finished' do
+        expect(game_w_questions).to be_finished
       end
     end
 
     context 'when it was last answer' do
       before do
         game_w_questions.current_level = 14
-        answer_one_question
+        answer_question_correct
       end
 
       it 'status equal won' do
         expect(game_w_questions.check_status).to eq(:won)
+      end
+
+      it 'is_finished' do
+        expect(game_w_questions).to be_finished
       end
     end
   end
