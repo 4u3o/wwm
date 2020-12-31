@@ -20,10 +20,37 @@ RSpec.describe GamesController, type: :controller do
       # Во flash должно быть сообщение об ошибке
       expect(flash[:alert]).to be
     end
+
+    it 'kicks from #create' do
+      post :create
+
+      expect(response).not_to be_ok
+      expect(response).to redirect_to(new_user_session_path)
+      expect(flash[:alert]).to be
+    end
+
+    it 'kicks from #answer' do
+      put :answer, id: game_w_questions.id
+
+      expect(response).not_to be_ok
+      expect(response).to redirect_to(new_user_session_path)
+      expect(flash[:alert]).to be
+    end
+
+    it 'kicks from #take_money' do
+      put :answer, id: game_w_questions.id
+
+      expect(response).not_to be_ok
+      expect(response).to redirect_to(new_user_session_path)
+      expect(flash[:alert]).to be
+    end
   end
 
   # группа тестов на экшены контроллера, доступных залогиненным юзерам
   context 'Usual user' do
+    let(:another_user_game) { FactoryGirl.create(:game_with_questions) }
+    let(:another_game_w_questions) { FactoryGirl.create(:game_with_questions, user: user) }
+
     # Этот блок будет выполняться перед каждым тестом в группе
     # Логиним юзера с помощью девайзовского метода sign_in
     before(:each) { sign_in user }
@@ -48,6 +75,14 @@ RSpec.describe GamesController, type: :controller do
       expect(flash[:notice]).to be
     end
 
+    it 'kicks from another user\'s #show' do
+      get :show, id: another_user_game.id
+
+      expect(response).not_to be_ok
+      expect(response).to redirect_to(root_path)
+      expect(flash[:alert]).to be
+    end
+
     it '#show game' do
       # Показываем по GET-запросу
       get :show, id: game_w_questions.id
@@ -62,6 +97,17 @@ RSpec.describe GamesController, type: :controller do
       expect(response).to be_ok
       # Проверяем рендерится ли шаблон show (НЕ сам шаблон!)
       expect(response).to render_template('show')
+    end
+
+    it 'cannot start another game untill old one ends' do
+      game_w_questions
+
+      expect(game_w_questions).not_to be_finished
+
+      expect { post :create }.not_to change(Game, :count)
+
+      expect(response).to redirect_to(game_path(game_w_questions.id))
+      expect(flash[:alert]).to be
     end
 
     it 'answers correct' do
@@ -80,6 +126,25 @@ RSpec.describe GamesController, type: :controller do
       expect(response).to redirect_to(game_path(game))
       # Флеш пустой
       expect(flash).to be_empty
+    end
+
+    it 'takes money' do
+      game_w_questions.update_attribute(:current_level, 2)
+
+      put :take_money, id: game_w_questions.id
+
+      game = assigns(:game)
+
+      expect(game).to be_finished
+      expect(game.check_status).to eq(:money)
+      expect(game.prize).to eq(200)
+
+      user.reload
+
+      expect(user.balance).to eq(200)
+
+      expect(response).to redirect_to(user_path(user))
+      expect(flash[:warning]).to be
     end
   end
 
